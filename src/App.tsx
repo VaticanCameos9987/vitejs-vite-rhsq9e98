@@ -52,7 +52,6 @@ export default function App() {
       }, 700);
       
     } catch (err: any) {
-      console.error("RevealCard Error:", err);
       if (err.message?.includes("CARD_NOT_FOUND")) {
         setErrorMsg("SECURITY ERROR: INVALID OR TAMPERED LINK.");
       } else if (err.message?.includes("ALREADY_SCRATCHED")) {
@@ -82,12 +81,15 @@ export default function App() {
           body { margin: 0; padding: 0; background-color: #240000; overflow-x: hidden; }
           .pulse { animation: pulseAnim 1.5s infinite; }
           @keyframes pulseAnim { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+          
+          /* Fixed Scooter Animation: Pulls back slightly right, then shoots forward to the left */
           .drive-away { animation: driveOff 0.7s forwards cubic-bezier(0.5, 0, 0.2, 1); }
           @keyframes driveOff { 
             0% { transform: translateX(0) scale(1); opacity: 1; } 
-            20% { transform: translateX(-20px) scale(1.1) rotate(-5deg); } 
-            100% { transform: translateX(150vw) scale(1) rotate(10deg); opacity: 0; } 
+            20% { transform: translateX(20px) scale(1.1) rotate(5deg); } 
+            100% { transform: translateX(-150vw) scale(1) rotate(-10deg); opacity: 0; } 
           }
+          
           .wobble-alert { animation: wobble 1.5s infinite; }
           @keyframes wobble {
             0%, 100% { transform: rotate(0deg); }
@@ -143,73 +145,87 @@ export default function App() {
         )}
 
         {isScratched && rewardData && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "15px", maxWidth: "500px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+          <>
+            <div style={{ background: "linear-gradient(90deg, #ff4d4d, #b30000)", padding: "10px", textAlign: "center", color: "#fff", fontWeight: "bold", fontSize: "1rem", letterSpacing: "1px", textTransform: "uppercase", boxShadow: "0 2px 10px rgba(255,0,0,0.3)" }}>
+              ⏳ Hurry! Claim within 24 hrs at your nearest store
+            </div>
             
-            <div className="wobble-alert" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: "rgba(255, 77, 77, 0.15)", border: "2px solid #ff4d4d", padding: "6px 15px", borderRadius: "50px", marginBottom: "20px", boxShadow: "0 4px 15px rgba(255, 77, 77, 0.3)" }}>
-              <div style={{ width: "12px", height: "12px", backgroundColor: "#ff4d4d", borderRadius: "50%", boxShadow: "0 0 10px #ff4d4d", animation: "pulseAnim 1s infinite" }}></div>
-              <span style={{ color: "#fff", fontSize: "1rem", letterSpacing: "1px", fontWeight: "bold" }}>
-                LIVE TICKET: {now.toLocaleTimeString('en-US', { hour12: false })}
-              </span>
-            </div>
-
-            <div style={{ textAlign: "center", marginBottom: "15px", position: "relative" }}>
-              <div style={{ display: "inline-block", background: "linear-gradient(90deg, #ff4d4d, #b30000)", color: "#fff", padding: "4px 20px", borderRadius: "20px", fontSize: "0.9rem", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", boxShadow: "0 2px 8px rgba(255,0,0,0.4)" }}>
-                ⚡ {rewardData.shift}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "15px", maxWidth: "500px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+              
+              <div className="wobble-alert" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: "rgba(255, 77, 77, 0.15)", border: "2px solid #ff4d4d", padding: "6px 15px", borderRadius: "50px", marginBottom: "20px", boxShadow: "0 4px 15px rgba(255, 77, 77, 0.3)", marginTop: "10px" }}>
+                <div style={{ width: "12px", height: "12px", backgroundColor: "#ff4d4d", borderRadius: "50%", boxShadow: "0 0 10px #ff4d4d", animation: "pulseAnim 1s infinite" }}></div>
+                <span style={{ color: "#fff", fontSize: "1rem", letterSpacing: "1px", fontWeight: "bold" }}>
+                  LIVE TICKET: {now.toLocaleTimeString('en-US', { hour12: false })}
+                </span>
               </div>
-              <h2 style={{ color: "#fff", margin: 0, fontSize: "2.5rem", fontFamily: "'Teko', sans-serif", letterSpacing: "1px", textShadow: "0px 2px 10px rgba(0,0,0,0.8)" }}>
-                {rewardData.title}
-              </h2>
-            </div>
 
-            <div style={{ background: "linear-gradient(90deg, #d4af37, #f8e5a0)", padding: "12px 15px", borderRadius: "8px", color: "#3a0202", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", boxShadow: "0 4px 10px rgba(0,0,0,0.3)" }}>
-              <div style={{ fontWeight: "900", fontSize: "1.2rem", letterSpacing: "0.5px" }}>🔥 THE MAIN EVENT</div>
-              <div style={{ fontSize: "1.3rem", fontWeight: "bold", background: "#3a0202", color: "#d4af37", padding: "4px 12px", borderRadius: "6px" }}>
-                {rewardData.eventDates}
+              <div style={{ textAlign: "center", marginBottom: "20px", position: "relative" }}>
+                <div style={{ display: "inline-block", background: "linear-gradient(90deg, #ff4d4d, #b30000)", color: "#fff", padding: "4px 20px", borderRadius: "20px", fontSize: "0.9rem", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", boxShadow: "0 2px 8px rgba(255,0,0,0.4)" }}>
+                  ⚡ {rewardData.shift}
+                </div>
+                <h2 style={{ color: "#fff", margin: 0, fontSize: "2.5rem", fontFamily: "'Teko', sans-serif", letterSpacing: "1px", textShadow: "0px 2px 10px rgba(0,0,0,0.8)" }}>
+                  {rewardData.title}
+                </h2>
               </div>
-            </div>
 
-            <div style={{ backgroundColor: "#1a0000", border: "2px solid #d4af37", padding: "15px", borderRadius: "12px", textAlign: "center", marginBottom: "25px" }}>
-              <p style={{ margin: "0 0 5px 0", color: "#d4af37", fontWeight: "bold", fontSize: "1.1rem", textTransform: "uppercase", letterSpacing: "2px" }}>
-                Base Event Surge
-              </p>
-              <p style={{ fontFamily: "'Teko', sans-serif", margin: 0, fontSize: "4.5rem", color: "#fff", lineHeight: "1" }}>
-                {rewardData.earnings}
-              </p>
-            </div>
-
-            <div style={{ marginBottom: "25px", padding: "0 5px" }}>
-              <h3 style={{ color: "#f8e5a0", textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 15px 0", fontSize: "1.1rem", textAlign: "center" }}>
-                🗺️ Your Path to Max Earnings
-              </h3>
-              <div style={{ position: "relative", paddingLeft: "10px" }}>
-                <div className="road-line"></div>
-                <div style={{ display: "flex", alignItems: "center", position: "relative", zIndex: 1, marginBottom: "20px" }}>
-                  <div style={{ width: "28px", height: "28px", backgroundColor: "#3a0202", border: "3px solid #d4af37", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", marginRight: "15px" }}>📦</div>
-                  <div style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", padding: "10px 15px", borderRadius: "8px" }}>
-                    <p style={{ margin: 0, color: "#ccc", fontSize: "0.95rem" }}>Per 5 Orders Delivered</p>
-                    <p style={{ margin: 0, color: "#a8e6cf", fontFamily: "'Teko', sans-serif", fontSize: "2rem", lineHeight: "1" }}>+{rewardData.perOrderBonus}</p>
+              {/* BBD 2026 Upgrade */}
+              <div style={{ background: "linear-gradient(135deg, #d4af37, #f8e5a0)", padding: "18px", borderRadius: "12px", color: "#3a0202", marginBottom: "25px", boxShadow: "0 4px 15px rgba(212, 175, 55, 0.2)", position: "relative", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                  <div style={{ fontWeight: "900", fontSize: "1.4rem", letterSpacing: "0.5px", fontFamily: "'Teko', sans-serif" }}>
+                    🔥 BBD 2026 IS HERE!
+                  </div>
+                  <div style={{ fontSize: "1rem", fontWeight: "bold", background: "#3a0202", color: "#d4af37", padding: "4px 10px", borderRadius: "6px" }}>
+                    {rewardData.eventDates}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", position: "relative", zIndex: 1 }}>
-                  <div style={{ width: "28px", height: "28px", backgroundColor: "#ff4d4d", border: "3px solid #fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", marginRight: "15px", boxShadow: "0 0 10px #ff4d4d" }}>🏆</div>
-                  <div style={{ flex: 1, background: "linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.3))", border: "1px solid #d4af37", padding: "10px 15px", borderRadius: "8px" }}>
-                    <p style={{ margin: 0, color: "#fff", fontWeight: "bold", fontSize: "0.95rem" }}>Survive the Full Week!</p>
-                    <p style={{ margin: 0, color: "#d4af37", fontFamily: "'Teko', sans-serif", fontSize: "2.2rem", lineHeight: "1", textShadow: "1px 1px 0 #000" }}>+{rewardData.continuationBonus}</p>
+                <p style={{ margin: 0, fontSize: "1.05rem", fontWeight: "700", lineHeight: "1.4" }}>
+                  Be part of the BIGGEST sale of the year! 🚀 Earn maximum payouts on every single order, hit your milestones, and kickstart a high-earning journey with us that keeps going well beyond the event!
+                </p>
+              </div>
+
+              <div style={{ backgroundColor: "#1a0000", border: "2px solid #d4af37", padding: "15px", borderRadius: "12px", textAlign: "center", marginBottom: "25px" }}>
+                <p style={{ margin: "0 0 5px 0", color: "#d4af37", fontWeight: "bold", fontSize: "1.1rem", textTransform: "uppercase", letterSpacing: "2px" }}>
+                  Base Event Surge
+                </p>
+                <p style={{ fontFamily: "'Teko', sans-serif", margin: 0, fontSize: "4.5rem", color: "#fff", lineHeight: "1" }}>
+                  {rewardData.earnings}
+                </p>
+              </div>
+
+              <div style={{ marginBottom: "25px", padding: "0 5px" }}>
+                <h3 style={{ color: "#f8e5a0", textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 15px 0", fontSize: "1.1rem", textAlign: "center" }}>
+                  🗺️ Your Path to Max Earnings
+                </h3>
+                <div style={{ position: "relative", paddingLeft: "10px" }}>
+                  <div className="road-line"></div>
+                  <div style={{ display: "flex", alignItems: "center", position: "relative", zIndex: 1, marginBottom: "20px" }}>
+                    <div style={{ width: "28px", height: "28px", backgroundColor: "#3a0202", border: "3px solid #d4af37", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", marginRight: "15px" }}>📦</div>
+                    <div style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.05)", padding: "10px 15px", borderRadius: "8px" }}>
+                      <p style={{ margin: 0, color: "#ccc", fontSize: "0.95rem" }}>Per 5 Orders Delivered</p>
+                      <p style={{ margin: 0, color: "#a8e6cf", fontFamily: "'Teko', sans-serif", fontSize: "2rem", lineHeight: "1" }}>+{rewardData.perOrderBonus}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", position: "relative", zIndex: 1 }}>
+                    <div style={{ width: "28px", height: "28px", backgroundColor: "#ff4d4d", border: "3px solid #fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", marginRight: "15px", boxShadow: "0 0 10px #ff4d4d" }}>🏆</div>
+                    <div style={{ flex: 1, background: "linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.3))", border: "1px solid #d4af37", padding: "10px 15px", borderRadius: "8px" }}>
+                      <p style={{ margin: 0, color: "#fff", fontWeight: "bold", fontSize: "0.95rem" }}>Survive the Full Week!</p>
+                      <p style={{ margin: 0, color: "#d4af37", fontFamily: "'Teko', sans-serif", fontSize: "2.2rem", lineHeight: "1", textShadow: "1px 1px 0 #000" }}>+{rewardData.continuationBonus}</p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ border: "2px dashed #ff4d4d", background: "rgba(255, 77, 77, 0.05)", padding: "20px", borderRadius: "10px", textAlign: "center", marginBottom: "20px" }}>
-              <p style={{ margin: "0 0 8px 0", color: "#ff4d4d", fontWeight: "bold", fontSize: "1.3rem", letterSpacing: "1px" }}>
-                ⚠️ ACTION REQUIRED
-              </p>
-              <p style={{ margin: 0, color: "#ddd", fontSize: "1.05rem", lineHeight: "1.4" }}>
-                Claim this offer at the earliest! Enroll yourself today at your nearest <span style={{ color: "#fff", fontWeight: "bold" }}>Flipkart Minutes</span> store before this ticket expires.
-              </p>
-            </div>
+              <div style={{ border: "2px dashed #ff4d4d", background: "rgba(255, 77, 77, 0.05)", padding: "20px", borderRadius: "10px", textAlign: "center", marginBottom: "20px" }}>
+                <p style={{ margin: "0 0 8px 0", color: "#ff4d4d", fontWeight: "bold", fontSize: "1.3rem", letterSpacing: "1px" }}>
+                  ⚠️ ACTION REQUIRED
+                </p>
+                <p style={{ margin: 0, color: "#ddd", fontSize: "1.05rem", lineHeight: "1.4" }}>
+                  Claim this offer at the earliest! Enroll yourself today at your nearest <span style={{ color: "#fff", fontWeight: "bold" }}>Flipkart Minutes</span> store before this ticket expires.
+                </p>
+              </div>
 
-          </div>
+            </div>
+          </>
         )}
       </div>
     </>
