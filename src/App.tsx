@@ -27,7 +27,7 @@ export default function App() {
     
     if (idFromUrl) {
       setActiveRiderId(idFromUrl);
-      trackOpen({ riderId: idFromUrl }).catch((err) => console.error("TrackOpen Error:", err));
+      trackOpen({ accessKey: idFromUrl }).catch((err) => console.error("TrackOpen Error:", err));
       setStatusMessage("TAP ANYWHERE TO REVEAL TARGET");
     } else {
       setErrorMsg("INVALID SECURE LINK.");
@@ -41,7 +41,7 @@ export default function App() {
     
     try {
       const payload = await revealCard({ 
-        riderId: activeRiderId, 
+        accessKey: activeRiderId, 
         userAgent: navigator.userAgent 
       });
       
@@ -54,13 +54,13 @@ export default function App() {
     } catch (err: any) {
       console.error("RevealCard Error:", err);
       if (err.message?.includes("CARD_NOT_FOUND")) {
-        setErrorMsg("RIDER CARD NOT FOUND IN DATABASE.");
+        setErrorMsg("SECURITY ERROR: INVALID OR TAMPERED LINK.");
       } else if (err.message?.includes("ALREADY_SCRATCHED")) {
         setErrorMsg("THIS TICKET HAS ALREADY BEEN REDEEMED.");
       } else if (err.message?.includes("CARD_EXPIRED")) {
         setErrorMsg("THIS TICKET HAS EXPIRED.");
       } else {
-        setErrorMsg("INVALID SECURE LINK OR DB SYNC PENDING.");
+        setErrorMsg("INVALID SECURE LINK.");
       }
       setIsAnimating(false);
     }
