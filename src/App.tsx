@@ -38,33 +38,98 @@ export default function App() {
     if (idFromUrl) {
       setActiveRiderId(idFromUrl);
       trackOpen({ accessKey: idFromUrl }).catch(() => {});
-      setStatusMessage("SCRATCH TO REVEAL TARGET");
+      setStatusMessage("SWIPE TO REVEAL TARGET");
     } else {
       setIsDemoMode(true);
       setActiveRiderId("DEMO_MODE");
-      setStatusMessage("SCRATCH TO REVEAL TARGET");
+      setStatusMessage("SWIPE TO REVEAL TARGET");
     }
   }, [trackOpen]);
 
+  // REDESIGNED PREMIUM LOTTERY TICKET CANVAS (WITH BOUNDARIES)
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas && !canvasHidden) {
+    const paintFoil = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || canvasHidden) return;
       const ctx = canvas.getContext("2d");
-      if (ctx) {
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, "#d4af37");
-        gradient.addColorStop(0.5, "#f8e5a0");
-        gradient.addColorStop(1, "#d4af37");
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.font = "bold 32px 'Teko', sans-serif";
-        ctx.fillStyle = "#3a0202";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("SCRATCH HERE", canvas.width / 2, canvas.height / 2);
+      if (!ctx) return;
+
+      // 1. Rich Metallic Foil Base
+      const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      bgGradient.addColorStop(0, "#e6c25a");
+      bgGradient.addColorStop(0.4, "#fdf0bd");
+      bgGradient.addColorStop(0.6, "#d4af37");
+      bgGradient.addColorStop(1, "#b8860b");
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Physical Scratch Texture (Noise)
+      ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
+      for(let i = 0; i < canvas.width; i += 3) {
+        for(let j = 0; j < canvas.height; j += 3) {
+          if(Math.random() > 0.5) ctx.fillRect(i, j, 2, 2);
+        }
       }
+      
+      // Diagonal shimmer lines
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+      for (let i = -canvas.width; i < canvas.width * 2; i += 15) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + canvas.height, canvas.height);
+        ctx.stroke();
+      }
+
+      // 3. Ticket Borders
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "#8a6508"; 
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(138, 101, 8, 0.5)"; 
+      ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+      ctx.setLineDash([]);
+
+      // 4. Centered, Properly Scaled Typography with strict max-widths
+      const maxTextWidth = canvas.width - 40; // Forces 20px padding on left and right
+      
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      // Brand Header
+      ctx.font = "bold 16px 'Rajdhani', sans-serif";
+      ctx.fillStyle = "#8a6508";
+      ctx.fillText("FLIPKART MINUTES", canvas.width / 2, 35, maxTextWidth);
+
+      // Main CTA
+      ctx.shadowColor = "rgba(255, 255, 255, 0.7)"; 
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      
+      ctx.font = "bold 42px 'Teko', sans-serif"; // Slightly smaller base size
+      ctx.fillStyle = "#3a0202"; 
+      ctx.fillText("SCRATCH & WIN", canvas.width / 2, canvas.height / 2 + 5, maxTextWidth);
+      
+      // Reset shadow
+      ctx.shadowColor = "transparent";
+
+      // Subtext
+      ctx.font = "bold 15px 'Rajdhani', sans-serif";
+      ctx.fillStyle = "#5a0a18";
+      ctx.fillText("REVEAL YOUR EXCLUSIVE PAYOUT", canvas.width / 2, canvas.height - 35, maxTextWidth);
+    };
+
+    // Paint immediately on mount
+    paintFoil();
+
+    // Re-paint exactly once the custom fonts finish downloading to prevent glitchy wider text
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        paintFoil();
+      });
     }
   }, [activeRiderId, canvasHidden, isScratched]); 
 
@@ -73,7 +138,7 @@ export default function App() {
     
     if (!hasStartedScratching) {
       setHasStartedScratching(true);
-      setStatusMessage("UNLOCKING...");
+      setStatusMessage("AUTHENTICATING ID...");
       
       if (isDemoMode) {
         setTimeout(() => {
@@ -162,7 +227,6 @@ export default function App() {
     );
   }
 
-  // Helper component for the inline F logo
   const FLogo = () => (
     <span style={{ background: "#f8e5a0", color: "#3a0202", fontWeight: "900", padding: "0px 5px", borderRadius: "3px", fontStyle: "italic", display: "inline-block", transform: "skewX(-10deg)", margin: "0 4px", fontSize: "0.9em" }}>
       F
@@ -175,8 +239,12 @@ export default function App() {
         {`
           @import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&family=Rajdhani:wght@500;700&display=swap');
           body { margin: 0; padding: 0; background-color: #240000; overflow-x: hidden; }
-          .pulse { animation: pulseAnim 1.5s infinite; }
-          @keyframes pulseAnim { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+          
+          .ticket-glow { animation: goldGlow 2s infinite alternate; }
+          @keyframes goldGlow { 
+            0% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); transform: translate(-50%, -50%) scale(1); } 
+            100% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.7); transform: translate(-50%, -50%) scale(1.02); } 
+          }
           
           .drive-away { animation: driveOff 0.7s forwards cubic-bezier(0.5, 0, 0.2, 1); }
           @keyframes driveOff { 
@@ -223,7 +291,6 @@ export default function App() {
         
         {activeRiderId && !isScratched && (
           <div 
-            className={isAnimating ? "" : "pulse"} 
             style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center", overflow: "hidden", position: "relative" }}
           >
             <div className={isAnimating ? "drive-away" : ""} style={{ fontSize: "6rem", marginBottom: "10px" }}>
@@ -241,8 +308,9 @@ export default function App() {
             {!canvasHidden && (
               <canvas
                 ref={canvasRef}
-                width={320}
-                height={250}
+                width={300}
+                height={220}
+                className="ticket-glow"
                 onMouseDown={handleScratchStart}
                 onMouseMove={(e) => handleScratchMove(e)}
                 onMouseUp={handleScratchEnd}
@@ -256,7 +324,6 @@ export default function App() {
                   left: "50%",
                   transform: "translate(-50%, -50%)",
                   borderRadius: "15px",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
                   cursor: "crosshair",
                   touchAction: "none" 
                 }}
@@ -273,7 +340,6 @@ export default function App() {
             
             <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "15px", maxWidth: "500px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
               
-              {/* EXCLUSIVE INVITE BANNER (Replaces formal Confidential box) */}
               <div style={{ backgroundColor: "#3a0202", border: "1px solid #d4af37", padding: "20px", borderRadius: "12px", marginBottom: "20px", textAlign: "center", boxShadow: "0 4px 15px rgba(212, 175, 55, 0.15)" }}>
                 <p style={{ margin: "0 0 10px 0", color: "#d4af37", fontWeight: "bold", fontSize: "0.95rem", letterSpacing: "2px", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                   🎫 EXCLUSIVE RIDER UNLOCK
