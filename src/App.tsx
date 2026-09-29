@@ -11,10 +11,8 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState("");
   const [now, setNow] = useState(new Date());
   
-  // Developer Mode Flag
   const [isDemoMode, setIsDemoMode] = useState(false);
 
-  // Scratch Canvas States
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scratchCount, setScratchCount] = useState(0);
   const [canvasHidden, setCanvasHidden] = useState(false);
@@ -46,7 +44,6 @@ export default function App() {
     }
   }, [trackOpen]);
 
-  // REDESIGNED PREMIUM LOTTERY TICKET CANVAS (WITH BOUNDARIES)
   useEffect(() => {
     const paintFoil = () => {
       const canvas = canvasRef.current;
@@ -54,7 +51,6 @@ export default function App() {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // 1. Rich Metallic Foil Base
       const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
       bgGradient.addColorStop(0, "#e6c25a");
       bgGradient.addColorStop(0.4, "#fdf0bd");
@@ -63,7 +59,6 @@ export default function App() {
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // 2. Physical Scratch Texture (Noise)
       ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
       for(let i = 0; i < canvas.width; i += 3) {
         for(let j = 0; j < canvas.height; j += 3) {
@@ -71,7 +66,6 @@ export default function App() {
         }
       }
       
-      // Diagonal shimmer lines
       ctx.lineWidth = 1;
       ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
       for (let i = -canvas.width; i < canvas.width * 2; i += 15) {
@@ -81,7 +75,6 @@ export default function App() {
         ctx.stroke();
       }
 
-      // 3. Ticket Borders
       ctx.lineWidth = 6;
       ctx.strokeStyle = "#8a6508"; 
       ctx.strokeRect(0, 0, canvas.width, canvas.height);
@@ -92,40 +85,33 @@ export default function App() {
       ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
       ctx.setLineDash([]);
 
-      // 4. Centered, Properly Scaled Typography with strict max-widths
-      const maxTextWidth = canvas.width - 40; // Forces 20px padding on left and right
+      const maxTextWidth = canvas.width - 40; 
       
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       
-      // Brand Header
       ctx.font = "bold 16px 'Rajdhani', sans-serif";
       ctx.fillStyle = "#8a6508";
-      ctx.fillText("FLIPKART MINUTES", canvas.width / 2, 35, maxTextWidth);
+      ctx.fillText("FLIPKART MINUTES", canvas.width / 2, 40, maxTextWidth);
 
-      // Main CTA
       ctx.shadowColor = "rgba(255, 255, 255, 0.7)"; 
       ctx.shadowBlur = 0;
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
       
-      ctx.font = "bold 42px 'Teko', sans-serif"; // Slightly smaller base size
+      ctx.font = "bold 46px 'Teko', sans-serif"; 
       ctx.fillStyle = "#3a0202"; 
       ctx.fillText("SCRATCH & WIN", canvas.width / 2, canvas.height / 2 + 5, maxTextWidth);
       
-      // Reset shadow
       ctx.shadowColor = "transparent";
 
-      // Subtext
-      ctx.font = "bold 15px 'Rajdhani', sans-serif";
+      ctx.font = "bold 16px 'Rajdhani', sans-serif";
       ctx.fillStyle = "#5a0a18";
-      ctx.fillText("REVEAL YOUR EXCLUSIVE PAYOUT", canvas.width / 2, canvas.height - 35, maxTextWidth);
+      ctx.fillText("REVEAL YOUR EXCLUSIVE PAYOUT", canvas.width / 2, canvas.height - 40, maxTextWidth);
     };
 
-    // Paint immediately on mount
     paintFoil();
 
-    // Re-paint exactly once the custom fonts finish downloading to prevent glitchy wider text
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => {
         paintFoil();
@@ -201,14 +187,14 @@ export default function App() {
 
     ctx.globalCompositeOperation = "destination-out";
     ctx.beginPath();
-    ctx.arc(x, y, 35, 0, Math.PI * 2);
+    ctx.arc(x, y, 40, 0, Math.PI * 2);
     ctx.fill();
 
     setScratchCount(prev => prev + 1);
   };
 
   useEffect(() => {
-    if (scratchCount > 40 && !canvasHidden) {
+    if (scratchCount > 50 && !canvasHidden) {
       setCanvasHidden(true);
       setIsAnimating(true);
       
@@ -242,8 +228,8 @@ export default function App() {
           
           .ticket-glow { animation: goldGlow 2s infinite alternate; }
           @keyframes goldGlow { 
-            0% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); transform: translate(-50%, -50%) scale(1); } 
-            100% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.7); transform: translate(-50%, -50%) scale(1.02); } 
+            0% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); transform: scale(1); } 
+            100% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.7); transform: scale(1.02); } 
           }
           
           .drive-away { animation: driveOff 0.7s forwards cubic-bezier(0.5, 0, 0.2, 1); }
@@ -290,45 +276,47 @@ export default function App() {
         </div>
         
         {activeRiderId && !isScratched && (
-          <div 
-            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center", overflow: "hidden", position: "relative" }}
-          >
-            <div className={isAnimating ? "drive-away" : ""} style={{ fontSize: "6rem", marginBottom: "10px" }}>
-              🛵💨
-            </div>
-            <div style={{ transition: "opacity 0.3s", opacity: isAnimating ? 0 : 1 }}>
-              <h1 style={{ color: "#d4af37", fontSize: "2.8rem", fontFamily: "'Teko', sans-serif", textTransform: "uppercase", margin: 0, lineHeight: "1" }}>
-                YOUR EXCLUSIVE TARGET
-              </h1>
-              <p style={{ color: "#f9f1d8", fontSize: "1.2rem", letterSpacing: "2px", marginTop: "15px", fontWeight: "bold" }}>
-                {statusMessage}
-              </p>
-            </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+            
+            {/* EXPANDED BOUNDING BOX: Exactly 350x250 */}
+            <div style={{ width: "350px", height: "250px", position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+              
+              <div className={isAnimating ? "drive-away" : ""} style={{ fontSize: "5rem", marginBottom: "5px" }}>
+                🛵💨
+              </div>
+              <div style={{ transition: "opacity 0.3s", opacity: isAnimating ? 0 : 1, width: "100%", padding: "0 10px", boxSizing: "border-box" }}>
+                <h1 style={{ color: "#d4af37", fontSize: "2.4rem", fontFamily: "'Teko', sans-serif", textTransform: "uppercase", margin: 0, lineHeight: "1" }}>
+                  YOUR TARGET
+                </h1>
+                <p style={{ color: "#f9f1d8", fontSize: "0.95rem", letterSpacing: "1px", marginTop: "10px", fontWeight: "bold" }}>
+                  {statusMessage}
+                </p>
+              </div>
 
-            {!canvasHidden && (
-              <canvas
-                ref={canvasRef}
-                width={300}
-                height={220}
-                className="ticket-glow"
-                onMouseDown={handleScratchStart}
-                onMouseMove={(e) => handleScratchMove(e)}
-                onMouseUp={handleScratchEnd}
-                onMouseLeave={handleScratchEnd}
-                onTouchStart={handleScratchStart}
-                onTouchMove={(e) => handleScratchMove(e)}
-                onTouchEnd={handleScratchEnd}
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  borderRadius: "15px",
-                  cursor: "crosshair",
-                  touchAction: "none" 
-                }}
-              />
-            )}
+              {!canvasHidden && (
+                <canvas
+                  ref={canvasRef}
+                  width={350}
+                  height={250}
+                  className="ticket-glow"
+                  onMouseDown={handleScratchStart}
+                  onMouseMove={(e) => handleScratchMove(e)}
+                  onMouseUp={handleScratchEnd}
+                  onMouseLeave={handleScratchEnd}
+                  onTouchStart={handleScratchStart}
+                  onTouchMove={(e) => handleScratchMove(e)}
+                  onTouchEnd={handleScratchEnd}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    borderRadius: "15px",
+                    cursor: "crosshair",
+                    touchAction: "none" 
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
 
