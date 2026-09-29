@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 
@@ -10,6 +10,16 @@ export default function App() {
   const [statusMessage, setStatusMessage] = useState("LOCATING YOUR ZONE...");
   const [errorMsg, setErrorMsg] = useState("");
   const [now, setNow] = useState(new Date());
+  
+  // Developer Mode Flag
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  // Scratch Canvas States
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [scratchCount, setScratchCount] = useState(0);
+  const [canvasHidden, setCanvasHidden] = useState(false);
+  const [hasStartedScratching, setHasStartedScratching] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
 
   const trackOpen = useMutation(api.cards.trackOpen);
   const revealCard = useMutation(api.cards.revealCard);
@@ -27,51 +37,137 @@ export default function App() {
     
     if (idFromUrl) {
       setActiveRiderId(idFromUrl);
-      trackOpen({ accessKey: idFromUrl }).catch((err) => console.error("TrackOpen Error:", err));
-      setStatusMessage("TAP ANYWHERE TO REVEAL TARGET");
+      trackOpen({ accessKey: idFromUrl }).catch(() => {});
+      setStatusMessage("SCRATCH TO REVEAL TARGET");
     } else {
-      setErrorMsg("INVALID SECURE LINK.");
+      setIsDemoMode(true);
+      setActiveRiderId("DEMO_MODE");
+      setStatusMessage("SCRATCH TO REVEAL TARGET");
     }
   }, [trackOpen]);
 
-  const handleTap = async () => {
-    if (!activeRiderId || isScratched || isAnimating) return;
-    setIsAnimating(true);
-    setStatusMessage("UNLOCKING...");
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas && !canvasHidden) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, "#d4af37");
+        gradient.addColorStop(0.5, "#f8e5a0");
+        gradient.addColorStop(1, "#d4af37");
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.font = "bold 32px 'Teko', sans-serif";
+        ctx.fillStyle = "#3a0202";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("SCRATCH HERE", canvas.width / 2, canvas.height / 2);
+      }
+    }
+  }, [activeRiderId, canvasHidden, isScratched]); 
+
+  const handleScratchStart = (e: any) => {
+    setIsDrawing(true);
     
-    try {
-      const payload = await revealCard({ 
-        accessKey: activeRiderId, 
-        userAgent: navigator.userAgent 
-      });
+    if (!hasStartedScratching) {
+      setHasStartedScratching(true);
+      setStatusMessage("UNLOCKING...");
+      
+      if (isDemoMode) {
+        setTimeout(() => {
+          setRewardData({
+            riderName: "Rahul Sharma",
+            riderId: "BLR_KOR_RIDER_001",
+            storeName: "Koramangala Hub",
+            city: "Bengaluru",
+            theme: "maroon_gold",
+            title: "KORAMANGALA MEGA SURGE",
+            eventDates: "Oct 7 & 8",
+            shift: "PEAK SHIFT BOOST",
+            earnings: "₹1,500",
+            perOrderBonus: "₹50",
+            continuationBonus: "₹2,000",
+          });
+        }, 300);
+      } else {
+        revealCard({ accessKey: activeRiderId!, userAgent: navigator.userAgent })
+          .then(payload => setRewardData(payload))
+          .catch(err => {
+            if (err.message?.includes("CARD_NOT_FOUND")) {
+              setErrorMsg("SECURITY ERROR: INVALID OR TAMPERED LINK.");
+            } else if (err.message?.includes("ALREADY_SCRATCHED")) {
+              setErrorMsg("THIS TICKET HAS ALREADY BEEN REDEEMED.");
+            } else if (err.message?.includes("CARD_EXPIRED")) {
+              setErrorMsg("THIS TICKET HAS EXPIRED.");
+            } else {
+              setErrorMsg("INVALID SECURE LINK.");
+            }
+          });
+      }
+    }
+    handleScratchMove(e, true);
+  };
+
+  const handleScratchEnd = () => {
+    setIsDrawing(false);
+  };
+
+  const handleScratchMove = (e: any, forceDraw = false) => {
+    if ((!isDrawing && !forceDraw) || canvasHidden) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+    
+    if (e.touches && e.touches.length > 0) {
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = e.clientX - rect.left;
+      y = e.clientY - rect.top;
+    }
+
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(x, y, 35, 0, Math.PI * 2);
+    ctx.fill();
+
+    setScratchCount(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (scratchCount > 40 && !canvasHidden) {
+      setCanvasHidden(true);
+      setIsAnimating(true);
       
       setTimeout(() => {
-        setRewardData(payload);
         setIsScratched(true);
         setIsAnimating(false);
       }, 700);
-      
-    } catch (err: any) {
-      if (err.message?.includes("CARD_NOT_FOUND")) {
-        setErrorMsg("SECURITY ERROR: INVALID OR TAMPERED LINK.");
-      } else if (err.message?.includes("ALREADY_SCRATCHED")) {
-        setErrorMsg("THIS TICKET HAS ALREADY BEEN REDEEMED.");
-      } else if (err.message?.includes("CARD_EXPIRED")) {
-        setErrorMsg("THIS TICKET HAS EXPIRED.");
-      } else {
-        setErrorMsg("INVALID SECURE LINK.");
-      }
-      setIsAnimating(false);
     }
-  };
+  }, [scratchCount, canvasHidden]);
 
-  if (errorMsg) {
+  if (errorMsg && !isDemoMode) {
     return (
-      <div style={{ minHeight: "100vh", backgroundColor: "#1a0000", color: "#ff4d4d", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "sans-serif", textAlign: "center" }}>
+      <div style={{ minHeight: "100vh", backgroundColor: "#1a0000", color: "#d4af37", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "sans-serif", textAlign: "center" }}>
         <h2>🚫 {errorMsg}</h2>
       </div>
     );
   }
+
+  // Helper component for the inline F logo
+  const FLogo = () => (
+    <span style={{ background: "#f8e5a0", color: "#3a0202", fontWeight: "900", padding: "0px 5px", borderRadius: "3px", fontStyle: "italic", display: "inline-block", transform: "skewX(-10deg)", margin: "0 4px", fontSize: "0.9em" }}>
+      F
+    </span>
+  );
 
   return (
     <>
@@ -82,7 +178,6 @@ export default function App() {
           .pulse { animation: pulseAnim 1.5s infinite; }
           @keyframes pulseAnim { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
           
-          /* Fixed Scooter Animation: Pulls back slightly right, then shoots forward to the left */
           .drive-away { animation: driveOff 0.7s forwards cubic-bezier(0.5, 0, 0.2, 1); }
           @keyframes driveOff { 
             0% { transform: translateX(0) scale(1); opacity: 1; } 
@@ -119,17 +214,18 @@ export default function App() {
         flexDirection: "column"
       }}>
         
-        <div style={{ padding: "15px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", borderBottom: "1px solid rgba(212, 175, 55, 0.2)" }}>
-          <div style={{ background: "#f8e5a0", color: "#3a0202", fontWeight: "900", padding: "2px 8px", borderRadius: "4px", fontSize: "1.2rem", fontStyle: "italic", fontFamily: "sans-serif" }}>
-            F
-          </div>
+        <div style={{ padding: "15px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", borderBottom: "1px solid rgba(212, 175, 55, 0.2)" }}>
+          <FLogo />
           <h2 style={{ margin: 0, color: "#f8e5a0", fontSize: "1.3rem", fontStyle: "italic", letterSpacing: "1px" }}>
             Flipkart Minutes
           </h2>
         </div>
         
         {activeRiderId && !isScratched && (
-          <div onClick={handleTap} className={isAnimating ? "" : "pulse"} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: "20px", textAlign: "center", overflow: "hidden" }}>
+          <div 
+            className={isAnimating ? "" : "pulse"} 
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", textAlign: "center", overflow: "hidden", position: "relative" }}
+          >
             <div className={isAnimating ? "drive-away" : ""} style={{ fontSize: "6rem", marginBottom: "10px" }}>
               🛵💨
             </div>
@@ -141,26 +237,67 @@ export default function App() {
                 {statusMessage}
               </p>
             </div>
+
+            {!canvasHidden && (
+              <canvas
+                ref={canvasRef}
+                width={320}
+                height={250}
+                onMouseDown={handleScratchStart}
+                onMouseMove={(e) => handleScratchMove(e)}
+                onMouseUp={handleScratchEnd}
+                onMouseLeave={handleScratchEnd}
+                onTouchStart={handleScratchStart}
+                onTouchMove={(e) => handleScratchMove(e)}
+                onTouchEnd={handleScratchEnd}
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  borderRadius: "15px",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                  cursor: "crosshair",
+                  touchAction: "none" 
+                }}
+              />
+            )}
           </div>
         )}
 
         {isScratched && rewardData && (
           <>
-            <div style={{ background: "linear-gradient(90deg, #ff4d4d, #b30000)", padding: "10px", textAlign: "center", color: "#fff", fontWeight: "bold", fontSize: "1rem", letterSpacing: "1px", textTransform: "uppercase", boxShadow: "0 2px 10px rgba(255,0,0,0.3)" }}>
-              ⏳ Hurry! Claim within 24 hrs at your nearest store
+            <div style={{ background: "linear-gradient(90deg, #5a0a18, #3a0202)", borderBottom: "1px solid #d4af37", padding: "12px 10px", textAlign: "center", color: "#f8e5a0", fontWeight: "bold", fontSize: "1rem", letterSpacing: "1px", textTransform: "uppercase", boxShadow: "0 4px 15px rgba(0,0,0,0.5)" }}>
+              ⏳ Hurry! Claim within 24 hrs at your nearest <FLogo /> Minutes store
             </div>
             
             <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "15px", maxWidth: "500px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
               
-              <div className="wobble-alert" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: "rgba(255, 77, 77, 0.15)", border: "2px solid #ff4d4d", padding: "6px 15px", borderRadius: "50px", marginBottom: "20px", boxShadow: "0 4px 15px rgba(255, 77, 77, 0.3)", marginTop: "10px" }}>
-                <div style={{ width: "12px", height: "12px", backgroundColor: "#ff4d4d", borderRadius: "50%", boxShadow: "0 0 10px #ff4d4d", animation: "pulseAnim 1s infinite" }}></div>
-                <span style={{ color: "#fff", fontSize: "1rem", letterSpacing: "1px", fontWeight: "bold" }}>
+              {/* EXCLUSIVE INVITE BANNER (Replaces formal Confidential box) */}
+              <div style={{ backgroundColor: "#3a0202", border: "1px solid #d4af37", padding: "20px", borderRadius: "12px", marginBottom: "20px", textAlign: "center", boxShadow: "0 4px 15px rgba(212, 175, 55, 0.15)" }}>
+                <p style={{ margin: "0 0 10px 0", color: "#d4af37", fontWeight: "bold", fontSize: "0.95rem", letterSpacing: "2px", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                  🎫 EXCLUSIVE RIDER UNLOCK
+                </p>
+                <h2 style={{ margin: "0 0 5px 0", color: "#fff", fontSize: "2rem", fontFamily: "'Teko', sans-serif", letterSpacing: "1px" }}>
+                  {rewardData.riderName}
+                </h2>
+                <div style={{ display: "inline-block", background: "rgba(212, 175, 55, 0.1)", border: "1px solid rgba(212, 175, 55, 0.3)", color: "#f8e5a0", padding: "4px 12px", borderRadius: "20px", fontSize: "0.85rem", letterSpacing: "1px", marginBottom: "15px" }}>
+                  OFFICIAL ID: {rewardData.riderId}
+                </div>
+                <p style={{ margin: 0, color: "#f9f1d8", fontSize: "1.05rem", lineHeight: "1.4" }}>
+                  Hey {rewardData.riderName.split(" ")[0]}, we've reserved this special payout structure just for you. Drop by the <strong>{rewardData.storeName}</strong> in <strong>{rewardData.city}</strong> to lock in these max earnings before they're gone!
+                </p>
+              </div>
+
+              <div className="wobble-alert" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", backgroundColor: "rgba(212, 175, 55, 0.1)", border: "1px solid #d4af37", padding: "6px 15px", borderRadius: "50px", marginBottom: "20px", boxShadow: "0 4px 15px rgba(212, 175, 55, 0.2)" }}>
+                <div style={{ width: "10px", height: "10px", backgroundColor: "#f8e5a0", borderRadius: "50%", boxShadow: "0 0 8px #f8e5a0", animation: "pulseAnim 1s infinite" }}></div>
+                <span style={{ color: "#f8e5a0", fontSize: "1rem", letterSpacing: "1px", fontWeight: "bold" }}>
                   LIVE TICKET: {now.toLocaleTimeString('en-US', { hour12: false })}
                 </span>
               </div>
 
               <div style={{ textAlign: "center", marginBottom: "20px", position: "relative" }}>
-                <div style={{ display: "inline-block", background: "linear-gradient(90deg, #ff4d4d, #b30000)", color: "#fff", padding: "4px 20px", borderRadius: "20px", fontSize: "0.9rem", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", boxShadow: "0 2px 8px rgba(255,0,0,0.4)" }}>
+                <div style={{ display: "inline-block", background: "linear-gradient(90deg, #d4af37, #b58b00)", color: "#3a0202", padding: "4px 20px", borderRadius: "20px", fontSize: "0.9rem", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
                   ⚡ {rewardData.shift}
                 </div>
                 <h2 style={{ color: "#fff", margin: 0, fontSize: "2.5rem", fontFamily: "'Teko', sans-serif", letterSpacing: "1px", textShadow: "0px 2px 10px rgba(0,0,0,0.8)" }}>
@@ -168,7 +305,6 @@ export default function App() {
                 </h2>
               </div>
 
-              {/* BBD 2026 Upgrade */}
               <div style={{ background: "linear-gradient(135deg, #d4af37, #f8e5a0)", padding: "18px", borderRadius: "12px", color: "#3a0202", marginBottom: "25px", boxShadow: "0 4px 15px rgba(212, 175, 55, 0.2)", position: "relative", overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                   <div style={{ fontWeight: "900", fontSize: "1.4rem", letterSpacing: "0.5px", fontFamily: "'Teko', sans-serif" }}>
@@ -206,7 +342,7 @@ export default function App() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", position: "relative", zIndex: 1 }}>
-                    <div style={{ width: "28px", height: "28px", backgroundColor: "#ff4d4d", border: "3px solid #fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", marginRight: "15px", boxShadow: "0 0 10px #ff4d4d" }}>🏆</div>
+                    <div style={{ width: "28px", height: "28px", backgroundColor: "#d4af37", border: "3px solid #fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", marginRight: "15px", boxShadow: "0 0 10px #d4af37" }}>🏆</div>
                     <div style={{ flex: 1, background: "linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.3))", border: "1px solid #d4af37", padding: "10px 15px", borderRadius: "8px" }}>
                       <p style={{ margin: 0, color: "#fff", fontWeight: "bold", fontSize: "0.95rem" }}>Survive the Full Week!</p>
                       <p style={{ margin: 0, color: "#d4af37", fontFamily: "'Teko', sans-serif", fontSize: "2.2rem", lineHeight: "1", textShadow: "1px 1px 0 #000" }}>+{rewardData.continuationBonus}</p>
@@ -215,15 +351,14 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ border: "2px dashed #ff4d4d", background: "rgba(255, 77, 77, 0.05)", padding: "20px", borderRadius: "10px", textAlign: "center", marginBottom: "20px" }}>
-                <p style={{ margin: "0 0 8px 0", color: "#ff4d4d", fontWeight: "bold", fontSize: "1.3rem", letterSpacing: "1px" }}>
+              <div style={{ border: "1px solid #d4af37", background: "rgba(212, 175, 55, 0.05)", padding: "20px", borderRadius: "10px", textAlign: "center", marginBottom: "20px" }}>
+                <p style={{ margin: "0 0 8px 0", color: "#d4af37", fontWeight: "bold", fontSize: "1.3rem", letterSpacing: "1px" }}>
                   ⚠️ ACTION REQUIRED
                 </p>
                 <p style={{ margin: 0, color: "#ddd", fontSize: "1.05rem", lineHeight: "1.4" }}>
-                  Claim this offer at the earliest! Enroll yourself today at your nearest <span style={{ color: "#fff", fontWeight: "bold" }}>Flipkart Minutes</span> store before this ticket expires.
+                  Claim this offer at the earliest! Enroll yourself today at your nearest <FLogo /> Minutes store before this ticket expires.
                 </p>
               </div>
-
             </div>
           </>
         )}
